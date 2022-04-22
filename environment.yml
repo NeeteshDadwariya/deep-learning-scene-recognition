@@ -1,0 +1,13 @@
+name: deep-learning-scene-recognition
+prefix: /Users/neetesh/opt/anaconda3/envs/deep-learning-scene-recognition
+channels:
+  - conda-forge
+  - anaconda
+  - defaults
+dependencies:
+  - glob
+  - jupyter
+  - matplotlib
+  - numpy
+  - pandas
+  - tensorflow

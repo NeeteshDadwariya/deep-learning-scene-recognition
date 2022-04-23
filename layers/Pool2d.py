@@ -57,7 +57,7 @@ class Pool2d:
                         cimg.append(chunk)
                     else:
                         pass
-                        #cv -= cstep
+                        # cv -= cstep
                     cv += stride[1]
                 rv += stride[0]
             cimg = np.array(cimg).reshape(int(rv / stride[0]), int(cv / stride[1]))
@@ -101,5 +101,3 @@ class Pool2d:
                     cv += cstep
                 rv += rstep
                 i += 1
-
-

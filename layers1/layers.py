@@ -4,6 +4,7 @@ import numpy as np
 import copy
 from layers1.activation_functions import Sigmoid, ReLU, SoftPlus, LeakyReLU
 from layers1.activation_functions import TanH, ELU, SELU, Softmax
+import inspect
 
 
 class Layer(object):
@@ -283,6 +284,8 @@ class Conv2D(Layer):
         return accum_grad
 
     def output_shape(self):
+        # TODO:
+        # print(inspect.currentframe().f_code.co_name, self.layer_name(), self.padding)
         channels, height, width = self.input_shape
         pad_h, pad_w = determine_padding(self.filter_shape, output_shape=self.padding)
         output_height = (height + np.sum(pad_h) - self.filter_shape[0]) / self.stride + 1
@@ -294,12 +297,13 @@ class BatchNormalization(Layer):
     """Batch normalization.
     """
 
-    def __init__(self, momentum=0.99):
+    def __init__(self, momentum=0.99, axis=0):
         self.momentum = momentum
         self.trainable = True
         self.eps = 0.01
         self.running_mean = None
         self.running_var = None
+        self.axis = axis
 
     def initialize(self, optimizer):
         # Initialize the parameters
@@ -316,12 +320,12 @@ class BatchNormalization(Layer):
 
         # Initialize running mean and variance if first run
         if self.running_mean is None:
-            self.running_mean = np.mean(X, axis=0)
-            self.running_var = np.var(X, axis=0)
+            self.running_mean = np.mean(X, self.axis)
+            self.running_var = np.var(X, self.axis)
 
         if training and self.trainable:
-            mean = np.mean(X, axis=0)
-            var = np.var(X, axis=0)
+            mean = np.mean(X, self.axis)
+            var = np.var(X, self.axis)
             self.running_mean = self.momentum * self.running_mean + (1 - self.momentum) * mean
             self.running_var = self.momentum * self.running_var + (1 - self.momentum) * var
         else:
@@ -345,8 +349,8 @@ class BatchNormalization(Layer):
         # If the layer is trainable the parameters are updated
         if self.trainable:
             X_norm = self.X_centered * self.stddev_inv
-            grad_gamma = np.sum(accum_grad * X_norm, axis=0)
-            grad_beta = np.sum(accum_grad, axis=0)
+            grad_gamma = np.sum(accum_grad * X_norm, self.axis)
+            grad_beta = np.sum(accum_grad, self.axis)
 
             self.gamma = self.gamma_opt.update(self.gamma, grad_gamma)
             self.beta = self.beta_opt.update(self.beta, grad_beta)
@@ -356,8 +360,8 @@ class BatchNormalization(Layer):
         # The gradient of the loss with respect to the layer inputs (use weights and statistics from forward pass)
         accum_grad = (1 / batch_size) * gamma * self.stddev_inv * (
                 batch_size * accum_grad
-                - np.sum(accum_grad, axis=0)
-                - self.X_centered * self.stddev_inv ** 2 * np.sum(accum_grad * self.X_centered, axis=0)
+                - np.sum(accum_grad, self.axis)
+                - self.X_centered * self.stddev_inv ** 2 * np.sum(accum_grad * self.X_centered, self.axis)
         )
 
         return accum_grad
@@ -370,9 +374,9 @@ class PoolingLayer(Layer):
     """A parent class of MaxPooling2D and AveragePooling2D
     """
 
-    def __init__(self, pool_shape=(2, 2), stride=1, padding=0):
+    def __init__(self, pool_shape=(2, 2), stride=2, padding='valid'):
         self.pool_shape = pool_shape
-        self.stride = stride
+        self.stride = pool_shape[0] if stride is None else stride
         self.padding = padding
         self.trainable = True
 
@@ -403,15 +407,15 @@ class PoolingLayer(Layer):
         accum_grad_col = self._pool_backward(accum_grad)
 
         accum_grad = column_to_image(accum_grad_col, (batch_size * channels, 1, height, width), self.pool_shape,
-                                     self.stride, 0)
+                                     self.stride, self.padding)
         accum_grad = accum_grad.reshape((batch_size,) + self.input_shape)
 
         return accum_grad
 
     def output_shape(self):
         channels, height, width = self.input_shape
-        out_height = (height - self.pool_shape[0]) / self.stride + 1
-        out_width = (width - self.pool_shape[1]) / self.stride + 1
+        out_height = (height - self.pool_shape[0]) // self.stride + 1
+        out_width = (width - self.pool_shape[1]) // self.stride + 1
         assert out_height % 1 == 0
         assert out_width % 1 == 0
         return channels, int(out_height), int(out_width)
@@ -659,6 +663,8 @@ class Activation(Layer):
 # Method which calculates the padding based on the specified output shape and the
 # shape of the filters
 def determine_padding(filter_shape, output_shape="same"):
+    # TODO:
+    # print(inspect.currentframe().f_code.co_name, filter_shape, output_shape)
     # No padding
     if output_shape == "valid":
         return (0, 0), (0, 0)
@@ -704,6 +710,8 @@ def get_im2col_indices(images_shape, filter_shape, padding, stride=1):
 # Used during the forward pass.
 # Reference: CS231n Stanford
 def image_to_column(images, filter_shape, stride, output_shape='same'):
+    # TODO:
+    # print(inspect.currentframe().f_code.co_name, images, filter_shape, stride, output_shape)
     filter_height, filter_width = filter_shape
 
     pad_h, pad_w = determine_padding(filter_shape, output_shape)
@@ -727,6 +735,8 @@ def image_to_column(images, filter_shape, stride, output_shape='same'):
 # Used during the backward pass.
 # Reference: CS231n Stanford
 def column_to_image(cols, images_shape, filter_shape, stride, output_shape='same'):
+    # TODO:
+    # print(inspect.currentframe().f_code.co_name, cols, images_shape, filter_shape, stride, output_shape)
     batch_size, channels, height, width = images_shape
     pad_h, pad_w = determine_padding(filter_shape, output_shape)
     height_padded = height + np.sum(pad_h)

@@ -2,8 +2,8 @@ from __future__ import print_function, division
 from terminaltables import AsciiTable
 import numpy as np
 import progressbar
-from utils import batch_iterator
-from utils import bar_widgets
+from layers1.utils import batch_iterator
+from layers1.utils import bar_widgets
 
 class NeuralNetwork():
     """Neural Network. Deep Learning base model.
@@ -41,6 +41,7 @@ class NeuralNetwork():
         # If this is not the first layer added then set the input shape
         # to the output shape of the last added layer
         if self.layers:
+            print(self.layers[-1].layer_name(), "output", self.layers[-1].output_shape())
             layer.set_input_shape(shape=self.layers[-1].output_shape())
 
         # If the layer has weights that needs to be initialized

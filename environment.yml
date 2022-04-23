@@ -5,9 +5,10 @@ channels:
   - anaconda
   - defaults
 dependencies:
-  - glob
+  - glob2
   - jupyter
   - matplotlib
   - numpy
   - pandas
+  - scikit-learn
   - tensorflow

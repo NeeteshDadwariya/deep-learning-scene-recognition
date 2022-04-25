@@ -7,35 +7,40 @@ from layers.BaseLayer import BaseLayer
 
 
 class Dense(BaseLayer):
-    def __init__(self, n_units, input_shape=None):
-        self.layer_input = None
-        self.input_shape = input_shape
-        self.n_units = n_units
-        self.weight = None
-        self.weight0 = None
+    def __init__(self, number_of_units, inp_size=None):
+        self.l_input = None
+        self.w = None
+        self.w0 = None
+        self.number_of_units = number_of_units
+        self.inp_size = inp_size
 
-    def initialize(self, optimizer):
-        limit = 1 / math.sqrt(self.input_shape[0])
-        self.weight = np.random.uniform(-limit, limit, (self.input_shape[0], self.n_units))
-        self.weight0 = np.zeros((1, self.n_units))
-        self.optim_w = copy.copy(optimizer)
-        self.optim_w0 = copy.copy(optimizer)
+    # Initializing values
+    def initialize_value(self, optimizer):
+        val = 1 / math.sqrt(self.inp_size[0])
+        self.w = np.random.uniform(-val, val, (self.inp_size[0], self.number_of_units))
+        self.w0 = np.zeros((1, self.number_of_units))
+        self.optimal_w = copy.copy(optimizer)
+        self.optimal_w0 = copy.copy(optimizer)
 
-    def parameters(self):
-        return np.prod(self.weight.shape) + np.prod(self.weight0.shape)
+    # Calculating the total number of parameters
+    def params(self):
+        return np.prod(self.w.shape) + np.prod(self.w0.shape)
 
-    def forward_flow(self, X, training=True):
-        self.layer_input = X
-        return X.dot(self.weight) + self.weight0
+    # Defining the forward flow function
+    def front_flow(self, X, training=True):
+        self.l_input = X
+        return self.w0 + X.dot(self.w)
 
-    def backward_flow(self, total_gradient):
-        W = self.weight
-        grad_w = self.layer_input.T.dot(total_gradient)
-        grad_w0 = np.sum(total_gradient, axis=0, keepdims=True)
-        self.weight = self.optim_w.update(self.weight, grad_w)
-        self.weight0 = self.optim_w0.update(self.weight0, grad_w0)
-        total_gradient = total_gradient.dot(W.T)
-        return total_gradient
+    # Defining the backward flow function
+    def back_flow(self, total_grad):
+        W = self.w
+        gradient_w = self.l_input.T.dot(total_grad)
+        gradient_w0 = np.sum(total_grad, axis=0, keepdims=True)
+        self.w = self.optimal_w.update(self.w, gradient_w)
+        self.w0 = self.optimal_w0.update(self.w0, gradient_w0)
+        total_grad = total_grad.dot(W.T)
+        return total_grad
 
+    # Returning the output units
     def get_output(self):
-        return (self.n_units,)
+        return (self.number_of_units,)

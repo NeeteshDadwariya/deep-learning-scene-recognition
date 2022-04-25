@@ -1,89 +1,88 @@
 import math
-import numpy as np
-
 from datetime import datetime
+
+import numpy as np
 
 SAME_PADDING = "same"
 VALID_PADDING = "valid"
 
 
-def batch_iterator(X, y=None, batch_size=64):
-    n_samples = X.shape[0]
-    for i in np.arange(0, n_samples, batch_size):
-        begin, end = i, min(i + batch_size, n_samples)
+def iter_batch(X, y=None, batch_size=64):
+    number_samp = X.shape[0]
+    for i in np.arange(0, number_samp, batch_size):
+        start, end = i, min(i + batch_size, number_samp)
         if y is not None:
-            yield X[begin:end], y[begin:end]
+            yield X[start:end], y[start:end]
         else:
-            yield X[begin:end]
+            yield X[start:end]
 
 
-def create_diagonal_matrix(x):
-    m = np.zeros((len(x), len(x)))
-    for i in range(len(m[0])):
-        m[i, i] = x[i]
-    return m
+def diagonal_matrix(x):
+    mat = np.zeros((len(x), len(x)))
+    for j in range(len(mat[0])):
+        mat[j, j] = x[j]
+    return mat
 
 
-def normalize(X, axis=-1, order=2):
+def normalize(X, order=2, axis=-1):
     l2 = np.atleast_1d(np.linalg.norm(X, order, axis))
     l2[l2 == 0] = 1
     return X / np.expand_dims(l2, axis)
 
 
-def get_padding_value(filter, padding=SAME_PADDING):
+def pad_values(filter, padding=SAME_PADDING):
     if padding == "valid":
         return (0, 0), (0, 0)
     elif padding == SAME_PADDING:
-        filter_h, filter_w = filter
-        h1 = int(math.floor((filter_h - 1) / 2))
-        h2 = int(math.ceil((filter_h - 1) / 2))
-        w1 = int(math.floor((filter_w - 1) / 2))
-        w2 = int(math.ceil((filter_w - 1) / 2))
-
+        h_filter, w_filter = filter
+        h1 = int(math.floor((h_filter - 1) / 2))
+        w1 = int(math.floor((w_filter - 1) / 2))
+        h2 = int(math.ceil((h_filter - 1) / 2))
+        w2 = int(math.ceil((w_filter - 1) / 2))
         return (h1, h2), (w1, w2)
 
 
 def find_column_values(image, filter, padding, stride=1):
-    batch_size, channels, height, width = image
-    filter_h, filter_w = filter
-    pad_h, pad_w = padding
-    output_height = int((height + np.sum(pad_h) - filter_h) / stride + 1)
-    output_width = int((width + np.sum(pad_w) - filter_w) / stride + 1)
+    batch_size, channel, height, width = image
+    h_f, w_f = filter
+    h_p, w_p = padding
+    h_out = int((height + np.sum(h_p) - h_f) / stride + 1)
+    w_out = int((width + np.sum(w_p) - w_f) / stride + 1)
 
-    i0 = np.repeat(np.arange(filter_h), filter_w)
-    i0 = np.tile(i0, channels)
-    i1 = stride * np.repeat(np.arange(output_height), output_width)
-    j0 = np.tile(np.arange(filter_w), filter_h * channels)
-    j1 = stride * np.tile(np.arange(output_width), output_height)
-    i = i0.reshape(-1, 1) + i1.reshape(1, -1)
-    j = j0.reshape(-1, 1) + j1.reshape(1, -1)
+    a0 = np.repeat(np.arange(h_f), w_f)
+    a0 = np.tile(a0, channel)
+    a1 = stride * np.repeat(np.arange(h_out), w_out)
+    b0 = np.tile(np.arange(w_f), h_f *  channel)
+    b1 = stride * np.tile(np.arange(w_out), h_out)
+    a = a0.reshape(-1, 1) + a1.reshape(1, -1)
+    b = b0.reshape(-1, 1) + b1.reshape(1, -1)
 
-    k = np.repeat(np.arange(channels), filter_h * filter_w).reshape(-1, 1)
-    return (k, i, j)
-
-
-def convert_img_to_col(images, filter, stride, output=SAME_PADDING):
-    pad_h, pad_w = get_padding_value(filter, output)
-    images_padded = np.pad(images, ((0, 0), (0, 0), pad_h, pad_w), mode='constant')
-    k, i, j = find_column_values(images.shape, filter, (pad_h, pad_w), stride)
-    cols = images_padded[:, k, i, j]
-    channels = images.shape[1]
-    filter_height, filter_width = filter
-    cols = cols.transpose(1, 2, 0).reshape(filter_height * filter_width * channels, -1)
-    return cols
+    l = np.repeat(np.arange(channel), h_f * w_f).reshape(-1, 1)
+    return (l, a, b)
 
 
-def column_to_image(cols, images_shape, filter, stride, output_shape=SAME_PADDING):
-    batch_size, channels, height, width = images_shape
-    pad_h, pad_w = get_padding_value(filter, output_shape)
-    padded_h = height + np.sum(pad_h)
-    padded_w = width + np.sum(pad_w)
-    padded_i = np.zeros((batch_size, channels, padded_h, padded_w))
-    k, i, j = find_column_values(images_shape, filter, (pad_h, pad_w), stride)
-    cols = cols.reshape(channels * np.prod(filter), -1, batch_size)
-    cols = cols.transpose(2, 0, 1)
-    np.add.at(padded_i, (slice(None), k, i, j), cols)
-    return padded_i[:, :, pad_h[0]:height + pad_h[0], pad_w[0]:width + pad_w[0]]
+def img_to_col(imgs, filter, stride, output=SAME_PADDING):
+    h_p, w_p = pad_values(filter, output)
+    image_pad = np.pad(imgs, ((0, 0), (0, 0), h_p, w_p), mode='constant')
+    k, i, j = find_column_values(imgs.shape, filter, (h_p, w_p), stride)
+    columns = image_pad[:, k, i, j]
+    channel = imgs.shape[1]
+    f_h, f_w = filter
+    columns = columns.transpose(1, 2, 0).reshape(f_h * f_w * channel, -1)
+    return columns
+
+
+def col_to_image(columns, img_shape, filter, stride, o_shape=SAME_PADDING):
+    b_size, channel, ht, wt = img_shape
+    h_p, w_p = pad_values(filter, o_shape)
+    h_padded = ht + np.sum(h_p)
+    w_padded = wt + np.sum(w_p)
+    i_padded = np.zeros((b_size, channel, h_padded, w_padded))
+    l, i, j = find_column_values(img_shape, filter, (h_p, w_p), stride)
+    columns = columns.reshape(channel * np.prod(filter), -1, b_size)
+    columns = columns.transpose(2, 0, 1)
+    np.add.at(i_padded, (slice(None), l, i, j), columns)
+    return i_padded[:, :, h_p[0]:ht + h_p[0], w_p[0]:wt + w_p[0]]
 
 
 class AdamOptimizer:
@@ -111,47 +110,46 @@ class AdamOptimizer:
         return original_weight - self.delta
 
 
-def accuracy_score(y_true, y_pred):
-    return np.sum(y_true == y_pred, axis=0) / len(y_true)
+def acc_score(y_true, y_pred):
+    return np.sum(y_pred == y_true, axis=0) / len(y_true)
 
 
 class Loss(object):
-    def loss(self, y_true, y_pred):
-        return NotImplementedError()
+    def loss(self, y_actual, y_predict):
+        pass
 
-    def gradient(self, y, y_pred):
-        raise NotImplementedError()
+    def gradient(self, y_actual, y_predict):
+        pass
 
-    def calc_accuracy(self, y, y_pred):
+    def calculate_accuracy(self, y_actual, y_predict):
         return 0
 
 
-class SquareLoss(Loss):
+class SquaredLoss(Loss):
     def __init__(self): pass
 
-    def loss(self, y, y_pred):
-        return 0.5 * np.power((y - y_pred), 2)
+    def loss(self, y_actual, y_predict):
+        return 0.5 * np.power((y_actual - y_predict), 2)
 
-    def gradient(self, y, y_pred):
-        return -(y - y_pred)
+    def gradient(self, y_actual, y_pred):
+        return -(y_actual - y_pred)
 
 
-class CrossEntropy(Loss):
+class CalCrossEntropy(Loss):
     def __init__(self): pass
 
-    def loss(self, y, p):
+    def loss(self, y, pr):
         # Clipping probability to avoid divide by zero error
-        p = np.clip(p, 1e-15, 1 - 1e-15)
-        return - y * np.log(p) - (1 - y) * np.log(1 - p)
+        pr = np.clip(pr, 1e-15, 1 - 1e-15)
+        return - y * np.log(pr) - (1 - y) * np.log(1 - pr)
 
-    def calc_accuracy(self, y, p):
-        return accuracy_score(np.argmax(y, axis=1), np.argmax(p, axis=1))
+    def calculate_accuracy(self, y, pr):
+        return acc_score(np.argmax(y, axis=1), np.argmax(pr, axis=1))
 
-    def gradient(self, y, p):
+    def gradient(self, y, pr):
         # Clipping probability to avoid divide by zero error
-        p = np.clip(p, 1e-15, 1 - 1e-15)
-        return - (y / p) + (1 - y) / (1 - p)
-
+        pr = np.clip(pr, 1e-15, 1 - 1e-15)
+        return - (y / pr) + (1 - y) / (1 - pr)
 
 def get_time_diff(start_time):
     return str((datetime.now() - start_time)).split(".")[0]

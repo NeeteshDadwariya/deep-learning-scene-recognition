@@ -1,59 +1,67 @@
-import copy
+import copy as cp
 import math
 
 import numpy as np
 
 from layers.BaseLayer import BaseLayer
-from layers.utils import get_padding_value, convert_img_to_col, column_to_image
+from layers.utils import pad_values, img_to_col, col_to_image
 
 
 class Conv2D(BaseLayer):
-    def __init__(self, n_filters, filter_shape, input_shape=None, stride=1, padding='same'):
-        self.n_filters = n_filters
-        self.filter_shape = filter_shape
-        self.input_shape = input_shape
-        self.padding = padding
+    def __init__(self, number_of_filters, f_size, inp_size=None, stride=1, pad_val='same'):
+        self.fil_count = number_of_filters
+        self.padding = pad_val
         self.stride = stride
+        self.f_size = f_size
+        self.inp_size = inp_size
 
-    def initialize(self, optimizer):
-        filter_height, filter_width = self.filter_shape
-        channels = self.input_shape[0]
-        limit = 1 / math.sqrt(np.prod(self.filter_shape))
-        self.weight = np.random.uniform(-limit, limit, size=(self.n_filters, channels, filter_height, filter_width))
-        self.weight0 = np.zeros((self.n_filters, 1))
-        self.optim_w = copy.copy(optimizer)
-        self.optim_w0 = copy.copy(optimizer)
+    # Initializing the values
+    def initialize_value(self, optimizer):
+        h_f, w_f = self.f_size
+        val = 1 / math.sqrt(np.prod(self.f_size))
+        channel = self.inp_size[0]
+        self.w = np.random.uniform(-val, val, size=(self.fil_count, channel, h_f, w_f))
+        self.w0 = np.zeros((self.fil_count, 1))
+        self.w_opt = cp.copy(optimizer)
+        self.w0_opt = cp.copy(optimizer)
 
-    def parameters(self):
-        return np.prod(self.weight.shape) + np.prod(self.weight0.shape)
+    # Calculating the number of parameters
+    def params(self):
+        val1 = self.w0.shape
+        val2 = self.w.shape
+        return np.prod(val1) + np.prod(val2)
 
-    def forward_flow(self, X, training=True):
-        batch_size, channels, height, width = X.shape
-        self.layer_input = X
-        self.X_col = convert_img_to_col(X, self.filter_shape, stride=self.stride, output=self.padding)
-        self.W_col = self.weight.reshape((self.n_filters, -1))
-        output = self.W_col.dot(self.X_col) + self.weight0
-        output = output.reshape(self.get_output() + (batch_size,))
-        return output.transpose(3, 0, 1, 2)
+    # Defining forward flow of input values
+    def front_flow(self, X, train=True):
+        sizeofbatch, channel, ht, wt = X.shape
+        self.in_lyr = X
+        self.Wcol = self.w.reshape((self.fil_count, -1))
+        self.Xcol = img_to_col(X, self.f_size, output=self.padding, stride=self.stride)
+        o = self.Wcol.dot(self.Xcol) + self.w0
+        o = o.reshape(self.get_output() + (sizeofbatch,))
+        return o.transpose(3, 0, 1, 2)
 
     def get_output(self):
-        channels, height, width = self.input_shape
-        pad_h, pad_w = get_padding_value(self.filter_shape, padding=self.padding)
-        output_height = (height + np.sum(pad_h) - self.filter_shape[0]) / self.stride + 1
-        output_width = (width + np.sum(pad_w) - self.filter_shape[1]) / self.stride + 1
-        return self.n_filters, int(output_height), int(output_width)
+        c, ht, wt = self.inp_size
+        h_p, w_p = pad_values(self.f_size, padding=self.padding)
+        o_ht = (ht + np.sum(h_p) - self.f_size[0]) / self.stride + 1
+        o_wt = (wt + np.sum(w_p) - self.f_size[1]) / self.stride + 1
+        return self.fil_count, int(o_ht), int(o_wt)
 
-    def backward_flow(self, total_gradient):
-        total_gradient = total_gradient.transpose(1, 2, 3, 0).reshape(self.n_filters, -1)
-        grad_w = total_gradient.dot(self.X_col.T).reshape(self.weight.shape)
-        grad_w0 = np.sum(total_gradient, axis=1, keepdims=True)
-        self.weight = self.optim_w.update(self.weight, grad_w)
-        self.weight0 = self.optim_w0.update(self.weight0, grad_w0)
-        total_gradient = self.W_col.T.dot(total_gradient)
-        total_gradient = column_to_image(total_gradient,
-                                         self.layer_input.shape,
-                                         self.filter_shape,
-                                         stride=self.stride,
-                                         output_shape=self.padding)
+    # Defining backward flow from output layer
+    def back_flow(self, total_gradient):
+        total_gradient = total_gradient.transpose(1, 2, 3, 0)
+        total_gradient = total_gradient.reshape(self.fil_count, -1)
+        grad_w = total_gradient.dot(self.Xcol.T).reshape(self.w.shape)
+        grad_w0 = np.sum(total_gradient, keepdims=True, axis=1, )
+        self.w = self.w_opt.update(self.w, grad_w)
+        self.w0 = self.w0_opt.update(self.w0, grad_w0)
+        total_gradient = self.Wcol.T.dot(total_gradient)
+        total_gradient = col_to_image(total_gradient,
+                                      self.in_lyr.shape,
+                                      self.f_size,
+                                      o_shape=self.padding,
+                                      stride=self.stride,
+                                      )
 
         return total_gradient

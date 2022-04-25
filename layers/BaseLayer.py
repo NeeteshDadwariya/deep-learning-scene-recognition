@@ -1,23 +1,24 @@
+# Defining Base Layer class
 class BaseLayer(object):
 
     def __init__(self):
-        self.input_shape = None
+        self.inp_size = None
 
     def set_input(self, shape):
-        self.input_shape = shape
+        self.inp_size = shape
 
     def name(self):
         return self.__class__.__name__
 
-    def parameters(self):
+    def params(self):
         return 0
 
     def get_output(self):
         raise NotImplementedError()
 
-    def forward_flow(self, X, training):
+    def front_flow(self, X, training):
         raise NotImplementedError()
 
-    def backward_flow(self, total_gradient):
+    def back_flow(self, total_gradient):
         raise NotImplementedError()
 

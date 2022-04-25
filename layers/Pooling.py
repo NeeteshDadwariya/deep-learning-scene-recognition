@@ -12,12 +12,12 @@ class PoolingLayer(BaseLayer):
 
     def front_flow(self, X, train=True):
         self.lyr_inp = X
-        b_size, channel, h, w = X.shape
-        X = X.reshape(b_size * channel, 1, h, w)
+        batchsize, channel, h, w = X.shape
+        X = X.reshape(batchsize * channel, 1, h, w)
         _, h_out, w_out = self.get_output()
         X_col = img_to_col(X, self.shape_pool, self.stride, self.pad_val)
         out = self._pool_forward(X_col)
-        out = out.reshape(h_out, w_out, b_size, channel)
+        out = out.reshape(h_out, w_out, batchsize, channel)
         out = out.transpose(2, 3, 0, 1)
         return out
 
@@ -46,7 +46,7 @@ class MaxPooling2D(PoolingLayer):
         return o
 
     def _pool_backward(self, total_gradient):
-        total_grad_col = np.zeros((np.prod(self.shape_pool), total_gradient.size))
+        totalgradcol = np.zeros((np.prod(self.shape_pool), total_gradient.size))
         argument_maximum = self.cache
-        total_grad_col[argument_maximum, range(total_gradient.size)] = total_gradient
-        return total_grad_col
+        totalgradcol[argument_maximum, range(total_gradient.size)] = total_gradient
+        return totalgradcol

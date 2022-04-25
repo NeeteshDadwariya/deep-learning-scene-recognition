@@ -22,8 +22,8 @@ class Conv2D(BaseLayer):
         channel = self.inp_size[0]
         self.w = np.random.uniform(-val, val, size=(self.fil_count, channel, h_f, w_f))
         self.w0 = np.zeros((self.fil_count, 1))
-        self.w_opt = cp.copy(optimizer)
-        self.w0_opt = cp.copy(optimizer)
+        self.wopt = cp.copy(optimizer)
+        self.w0opt = cp.copy(optimizer)
 
     # Calculating the number of parameters
     def params(self):
@@ -49,19 +49,19 @@ class Conv2D(BaseLayer):
         return self.fil_count, int(o_ht), int(o_wt)
 
     # Defining backward flow from output layer
-    def back_flow(self, total_gradient):
-        total_gradient = total_gradient.transpose(1, 2, 3, 0)
-        total_gradient = total_gradient.reshape(self.fil_count, -1)
-        grad_w = total_gradient.dot(self.Xcol.T).reshape(self.w.shape)
-        grad_w0 = np.sum(total_gradient, keepdims=True, axis=1, )
-        self.w = self.w_opt.update(self.w, grad_w)
-        self.w0 = self.w0_opt.update(self.w0, grad_w0)
-        total_gradient = self.Wcol.T.dot(total_gradient)
-        total_gradient = col_to_image(total_gradient,
-                                      self.in_lyr.shape,
-                                      self.f_size,
-                                      o_shape=self.padding,
-                                      stride=self.stride,
-                                      )
+    def back_flow(self, totalgrad):
+        totalgrad = totalgrad.transpose(1, 2, 3, 0)
+        totalgrad = totalgrad.reshape(self.fil_count, -1)
+        grad_w = totalgrad.dot(self.Xcol.T).reshape(self.w.shape)
+        grad_w0 = np.sum(totalgrad, keepdims=True, axis=1, )
+        self.w = self.wopt.update(self.w, grad_w)
+        self.w0 = self.w0opt.update(self.w0, grad_w0)
+        totalgrad = self.Wcol.T.dot(totalgrad)
+        totalgrad = col_to_image(totalgrad,
+                                 self.in_lyr.shape,
+                                 self.f_size,
+                                 o_shape=self.padding,
+                                 stride=self.stride,
+                                 )
 
-        return total_gradient
+        return totalgrad

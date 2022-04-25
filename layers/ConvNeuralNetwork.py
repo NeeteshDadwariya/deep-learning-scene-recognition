@@ -13,10 +13,10 @@ class NeuralNetwork:
         self.opt_type = opt_type
         self.loss_func = loss()
         self.er_dict = {"validation": [], "training": []}
-        self.valid_set = None
+        self.validset = None
         if val_datas:
             X, y = val_datas
-            self.valid_set = {"X": X, "y": y}
+            self.validset = {"X": X, "y": y}
 
     # Implementing the add function for the layers
     def add(self, layer):
@@ -29,53 +29,53 @@ class NeuralNetwork:
     # Function to calculate loss and accuracy for test data
     def test_batch(self, X, y):
         y_predict = self._front_pass(X, training=False)
-        loss_val = np.mean(self.loss_func.loss(y, y_predict))
+        lossval = np.mean(self.loss_func.loss(y, y_predict))
         accuracy = self.loss_func.calculate_accuracy(y, y_predict)
-        return loss_val, accuracy
+        return lossval, accuracy
 
     # Function to calculate loss and accuracy for train data
     def train_batch(self, X, y):
         y_predict = self._front_pass(X)
-        loss_val = np.mean(self.loss_func.loss(y, y_predict))
+        lossval = np.mean(self.loss_func.loss(y, y_predict))
         accuracy = self.loss_func.calculate_accuracy(y, y_predict)
-        loss_gradient = self.loss_func.gradient(y, y_predict)
-        self._backward_pass(loss_gradient=loss_gradient)
+        lossgradient = self.loss_func.gradient(y, y_predict)
+        self._backward_pass(loss_gradient=lossgradient)
 
-        return loss_val, accuracy
+        return lossval, accuracy
 
     # Function to fit the data to the model
-    def fit(self, X, y, n_epochs, batch_size):
+    def fit(self, X, y, nepochs, batch_size):
         train_acc = []
         val_acc = []
         total_start_time = datetime.now()
-        for i in range(n_epochs):
-            batch_error = []
+        for i in range(nepochs):
+            batcherror = []
             batch_train_accuracy = []
             val_accuracy = 0
             batch = 1
             epoch_start_time = datetime.now()
-            for X_batch, y_batch in iter_batch(X, y, batch_size=batch_size):
-                loss, train_accuracy = self.train_batch(X_batch, y_batch)
-                batch_error.append(loss)
+            for Xbatch, ybatch in iter_batch(X, y, batch_size=batch_size):
+                loss, train_accuracy = self.train_batch(Xbatch, ybatch)
+                batcherror.append(loss)
                 batch_train_accuracy.append(train_accuracy)
                 print("Training for epoch:{} batch:{} in time:{} | loss={:.2f}, accuracy={:.2f}"
                       .format(i, batch, get_time_diff(epoch_start_time), loss, train_accuracy), end='\r')
                 batch += 1
             print("")
 
-            if self.valid_set is not None:
-                val_loss, val_accuracy = self.test_batch(self.valid_set["X"], self.valid_set["y"])
-                self.er_dict["validation"].append(val_loss)
+            if self.validset is not None:
+                valloss, val_accuracy = self.test_batch(self.validset["X"], self.validset["y"])
+                self.er_dict["validation"].append(valloss)
 
-            mean_training_loss = np.mean(batch_error)
+            mean_trainingloss = np.mean(batcherror)
             mean_training_accuracy = np.mean(batch_train_accuracy)
             train_acc.append(mean_training_accuracy)
             val_acc.append(val_accuracy)
 
-            self.er_dict["training"].append(mean_training_loss)
+            self.er_dict["training"].append(mean_trainingloss)
             print(
                 "Training loop complete for epoch:{} in time:{} | train_loss:{:.2f} train_accuracy:{:.2f} | val_loss:{:.2f} val_accuracy:{:.2f}"
-                    .format(i, get_time_diff(epoch_start_time), mean_training_loss, mean_training_accuracy, val_loss,
+                    .format(i, get_time_diff(epoch_start_time), mean_trainingloss, mean_training_accuracy, valloss,
                             val_accuracy))
 
         print("Final accuracy:{:.2f} | Time taken:{}".format(val_acc[-1], get_time_diff(total_start_time)))
@@ -97,7 +97,7 @@ class NeuralNetwork:
     def summary(self, name="Model Summary"):
         print(AsciiTable([[name]]).table)
         print("Input Shape: %s" % str(self.list_layers[0].inp_size))
-        tab_val = [["Name of Layer", "Parameters", "Output Shape"]]
+        tab_val = [["Name of Layer", "Params", "Output Shape"]]
         total_parameters = 0
         for l in self.list_layers:
             l_name = l.name()

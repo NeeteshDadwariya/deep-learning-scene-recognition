@@ -28,15 +28,16 @@ class Activation(BaseLayer):
         self.lyr = None
         self.funct = func()
 
-    def name(self):
-        return "Activation ({})".format(self.funct.__class__.__name__)
-
     def get_output(self):
         return self.inp_size
 
-    def back_flow(self, total_gradient):
-        return total_gradient * self.funct.gradient(self.lyr)
+    def name(self):
+        return "Activation ({})".format(self.funct.__class__.__name__)
 
     def front_flow(self, val, training=True):
         self.lyr = val
         return self.funct(val)
+
+    def back_flow(self, total_gradient):
+        return total_gradient * self.funct.gradient(self.lyr)
+

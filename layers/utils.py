@@ -7,6 +7,13 @@ SAME_PADDING = "same"
 VALID_PADDING = "valid"
 
 
+
+def diagonal_matrix(x):
+    mat = np.zeros((len(x), len(x)))
+    for j in range(len(mat[0])):
+        mat[j, j] = x[j]
+    return mat
+
 def iter_batch(X, y=None, batch_size=64):
     number_samp = X.shape[0]
     for i in np.arange(0, number_samp, batch_size):
@@ -15,14 +22,6 @@ def iter_batch(X, y=None, batch_size=64):
             yield X[start:end], y[start:end]
         else:
             yield X[start:end]
-
-
-def diagonal_matrix(x):
-    mat = np.zeros((len(x), len(x)))
-    for j in range(len(mat[0])):
-        mat[j, j] = x[j]
-    return mat
-
 
 def normalize(X, order=2, axis=-1):
     lval2 = np.atleast_1d(np.linalg.norm(X, order, axis))
@@ -78,10 +77,10 @@ def col_to_image(columns, img_shape, filter, stride, o_shape=SAME_PADDING):
     h_padded = ht + np.sum(h_p)
     w_padded = wt + np.sum(w_p)
     ipadval = np.zeros((b_size, channel, h_padded, w_padded))
-    l, i, j = find_column_values(img_shape, filter, (h_p, w_p), stride)
+    l, a, b = find_column_values(img_shape, filter, (h_p, w_p), stride)
     columns = columns.reshape(channel * np.prod(filter), -1, b_size)
     columns = columns.transpose(2, 0, 1)
-    np.add.at(ipadval, (slice(None), l, i, j), columns)
+    np.add.at(ipadval, (slice(None), l, a, b), columns)
     return ipadval[:, :, h_p[0]:ht + h_p[0], w_p[0]:wt + w_p[0]]
 
 

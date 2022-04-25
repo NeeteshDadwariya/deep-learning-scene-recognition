@@ -15,10 +15,6 @@ class Dropout(BaseLayer):
     def get_output(self):
         return self.inp_size
 
-    # Defining backward flow
-    def back_flow(self, total_gradient):
-        return total_gradient * self._mask_val
-
     # Defining forward flow
     def front_flow(self, X, train=True):
         cval = (1 - self.pval)
@@ -26,3 +22,9 @@ class Dropout(BaseLayer):
             self._mask_val = np.random.uniform(size=X.shape) > self.pval
             cval = self._mask_val
         return X * cval
+
+    # Defining backward flow
+    def back_flow(self, total_gradient):
+        return total_gradient * self._mask_val
+
+

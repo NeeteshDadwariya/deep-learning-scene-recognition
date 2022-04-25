@@ -4,8 +4,8 @@ from layers.BaseLayer import BaseLayer
 
 
 class Dropout(BaseLayer):
-    def __init__(self, p_val=0.2):
-        self.p_val = p_val
+    def __init__(self, pval=0.2):
+        self.pval = pval
         self.number_of_units = None
         self.pass_through = True
         self._mask_val = None
@@ -20,9 +20,9 @@ class Dropout(BaseLayer):
         return total_gradient * self._mask_val
 
     # Defining forward flow
-    def front_flow(self, X, training=True):
-        c_val = (1 - self.p_val)
-        if training:
-            self._mask_val = np.random.uniform(size=X.shape) > self.p_val
-            c_val = self._mask_val
-        return X * c_val
+    def front_flow(self, X, train=True):
+        cval = (1 - self.pval)
+        if train:
+            self._mask_val = np.random.uniform(size=X.shape) > self.pval
+            cval = self._mask_val
+        return X * cval

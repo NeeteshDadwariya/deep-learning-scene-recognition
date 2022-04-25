@@ -25,9 +25,9 @@ def diagonal_matrix(x):
 
 
 def normalize(X, order=2, axis=-1):
-    l2 = np.atleast_1d(np.linalg.norm(X, order, axis))
-    l2[l2 == 0] = 1
-    return X / np.expand_dims(l2, axis)
+    lval2 = np.atleast_1d(np.linalg.norm(X, order, axis))
+    lval2[lval2 == 0] = 1
+    return X / np.expand_dims(lval2, axis)
 
 
 def pad_values(filter, padding=SAME_PADDING):
@@ -43,17 +43,17 @@ def pad_values(filter, padding=SAME_PADDING):
 
 
 def find_column_values(image, filter, padding, stride=1):
-    batch_size, channel, height, width = image
+    batch_size, channel, ht, wt = image
     h_f, w_f = filter
     h_p, w_p = padding
-    h_out = int((height + np.sum(h_p) - h_f) / stride + 1)
-    w_out = int((width + np.sum(w_p) - w_f) / stride + 1)
+    hout = int((ht + np.sum(h_p) - h_f) / stride + 1)
+    wout = int((wt + np.sum(w_p) - w_f) / stride + 1)
 
     a0 = np.repeat(np.arange(h_f), w_f)
     a0 = np.tile(a0, channel)
-    a1 = stride * np.repeat(np.arange(h_out), w_out)
-    b0 = np.tile(np.arange(w_f), h_f *  channel)
-    b1 = stride * np.tile(np.arange(w_out), h_out)
+    a1 = stride * np.repeat(np.arange(hout), wout)
+    b0 = np.tile(np.arange(w_f), h_f * channel)
+    b1 = stride * np.tile(np.arange(wout), hout)
     a = a0.reshape(-1, 1) + a1.reshape(1, -1)
     b = b0.reshape(-1, 1) + b1.reshape(1, -1)
 
@@ -63,9 +63,9 @@ def find_column_values(image, filter, padding, stride=1):
 
 def img_to_col(imgs, filter, stride, output=SAME_PADDING):
     h_p, w_p = pad_values(filter, output)
-    image_pad = np.pad(imgs, ((0, 0), (0, 0), h_p, w_p), mode='constant')
+    img_pad = np.pad(imgs, ((0, 0), (0, 0), h_p, w_p), mode='constant')
     k, i, j = find_column_values(imgs.shape, filter, (h_p, w_p), stride)
-    columns = image_pad[:, k, i, j]
+    columns = img_pad[:, k, i, j]
     channel = imgs.shape[1]
     f_h, f_w = filter
     columns = columns.transpose(1, 2, 0).reshape(f_h * f_w * channel, -1)
@@ -77,12 +77,12 @@ def col_to_image(columns, img_shape, filter, stride, o_shape=SAME_PADDING):
     h_p, w_p = pad_values(filter, o_shape)
     h_padded = ht + np.sum(h_p)
     w_padded = wt + np.sum(w_p)
-    i_padded = np.zeros((b_size, channel, h_padded, w_padded))
+    ipadval = np.zeros((b_size, channel, h_padded, w_padded))
     l, i, j = find_column_values(img_shape, filter, (h_p, w_p), stride)
     columns = columns.reshape(channel * np.prod(filter), -1, b_size)
     columns = columns.transpose(2, 0, 1)
-    np.add.at(i_padded, (slice(None), l, i, j), columns)
-    return i_padded[:, :, h_p[0]:ht + h_p[0], w_p[0]:wt + w_p[0]]
+    np.add.at(ipadval, (slice(None), l, i, j), columns)
+    return ipadval[:, :, h_p[0]:ht + h_p[0], w_p[0]:wt + w_p[0]]
 
 
 class AdamOptimizer:
@@ -150,6 +150,7 @@ class CalCrossEntropy(Loss):
         # Clipping probability to avoid divide by zero error
         pr = np.clip(pr, 1e-15, 1 - 1e-15)
         return - (y / pr) + (1 - y) / (1 - pr)
+
 
 def get_time_diff(start_time):
     return str((datetime.now() - start_time)).split(".")[0]

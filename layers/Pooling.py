@@ -11,7 +11,7 @@ class PoolingLayer(BaseLayer):
         self.pad_val = padding
 
     def front_flow(self, X, train=True):
-        self.l_input = X
+        self.lyr_inp = X
         b_size, channel, h, w = X.shape
         X = X.reshape(b_size * channel, 1, h, w)
         _, h_out, w_out = self.get_output()
@@ -21,15 +21,15 @@ class PoolingLayer(BaseLayer):
         out = out.transpose(2, 3, 0, 1)
         return out
 
-    def back_flow(self, total_grad):
-        b_size, _, _, _ = total_grad.shape
+    def back_flow(self, totalgrad):
+        b_size, _, _, _ = totalgrad.shape
         channels, h, w = self.inp_size
-        total_grad = total_grad.transpose(2, 3, 0, 1).ravel()
-        total_gradient_col = self._pool_backward(total_grad)
-        total_grad = col_to_image(total_gradient_col, (b_size * channels, 1, h, w), self.shape_pool,
-                                  self.stride, self.pad_val)
-        total_grad = total_grad.reshape((b_size,) + self.inp_size)
-        return total_grad
+        totalgrad = totalgrad.transpose(2, 3, 0, 1).ravel()
+        total_gradient_col = self._pool_backward(totalgrad)
+        totalgrad = col_to_image(total_gradient_col, (b_size * channels, 1, h, w), self.shape_pool,
+                                 self.stride, self.pad_val)
+        totalgrad = totalgrad.reshape((b_size,) + self.inp_size)
+        return totalgrad
 
     def get_output(self):
         channel, h, w = self.inp_size

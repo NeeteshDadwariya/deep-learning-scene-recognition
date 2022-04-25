@@ -1,7 +1,9 @@
 import numpy as np
+
+from datetime import datetime
 from terminaltables import AsciiTable
 
-from layers.utils import batch_iterator
+from layers.utils import batch_iterator, get_time_diff
 
 
 class NeuralNetwork:
@@ -42,18 +44,21 @@ class NeuralNetwork:
     def fit(self, X, y, n_epochs, batch_size):
         train_acc = []
         val_acc = []
-
+        total_start_time = datetime.now()
         for i in range(n_epochs):
             batch_error = []
             batch_train_accuracy = []
             val_accuracy = 0
-            batch = 0
+            batch = 1
+            epoch_start_time = datetime.now()
             for X_batch, y_batch in batch_iterator(X, y, batch_size=batch_size):
                 loss, train_accuracy = self.train_on_batch(X_batch, y_batch)
                 batch_error.append(loss)
                 batch_train_accuracy.append(train_accuracy)
-                # print("Training for epoch:{} batch:{} | loss={}, accuracy={}".format(i, batch, loss, train_accuracy))
+                print("Training for epoch:{} batch:{} in time:{} | loss={:.2f}, accuracy={:.2f}"
+                      .format(i, batch, get_time_diff(epoch_start_time), loss, train_accuracy), end='\r')
                 batch += 1
+            print("")
 
             if self.val_set is not None:
                 val_loss, val_accuracy = self.test_on_batch(self.val_set["X"], self.val_set["y"])
@@ -66,9 +71,10 @@ class NeuralNetwork:
 
             self.errors["training"].append(mean_training_loss)
             print(
-                "Training loop epoch:{} | train_loss:{:.2f} train_accuracy:{:.2f} | val_loss:{:.2f} val_accuracy:{:.2f}"
-                .format(i, mean_training_loss, mean_training_accuracy, val_loss, val_accuracy))
+                "Training loop complete for epoch:{} in time:{} | train_loss:{:.2f} train_accuracy:{:.2f} | val_loss:{:.2f} val_accuracy:{:.2f}"
+                    .format(i, get_time_diff(epoch_start_time), mean_training_loss, mean_training_accuracy, val_loss, val_accuracy))
 
+        print("Final accuracy:{:.2f} | Time taken:{}".format(val_acc[-1], get_time_diff(total_start_time)))
         return self.errors["training"], self.errors["validation"], train_acc, val_acc
 
     def _forward_pass(self, X, training=True):

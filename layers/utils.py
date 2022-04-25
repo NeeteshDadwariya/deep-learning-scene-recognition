@@ -1,6 +1,7 @@
 import math
-
 import numpy as np
+
+from datetime import datetime
 
 SAME_PADDING = "same"
 VALID_PADDING = "valid"
@@ -150,3 +151,7 @@ class CrossEntropy(Loss):
         # Clipping probability to avoid divide by zero error
         p = np.clip(p, 1e-15, 1 - 1e-15)
         return - (y / p) + (1 - y) / (1 - p)
+
+
+def get_time_diff(start_time):
+    return str((datetime.now() - start_time)).split(".")[0]
